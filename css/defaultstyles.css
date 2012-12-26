@@ -1,0 +1,6 @@
+table.monthBlock{
+	text-align:center;
+}
+span.changeMonth{
+	cursor:pointer;
+}

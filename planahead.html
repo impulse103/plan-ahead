@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<title>Plan Ahead</title>
+		<meta name="description" content="Plan Ahead - HTML5 Calendar">
+		<meta name="author" content="Adam Tacon">
+		<link rel="stylesheet" href="css/defaultstyles.css">
+		<script src="js/jquery-1.8.3.min.js"></script>
+		<script src="js/datescripts.js"></script>
+		<script type="text/javascript">
+$(document).ready(function(){
+	//Extend the date prototype to allow any date object to return the number of days in its month
+	Date.prototype.getNumOfDaysInMonth = function() {
+		return new Date(this.getFullYear(), this.getMonth()+1, 0).getDate();	
+	}
+	//Get the day number where 0 to 6 represents Monday to Sunday, alternative to the getDay() absurdity where 0 represents Sunday
+	Date.prototype.getDayWhereMondayIsZero = function(){
+		var dn = new Date(this).getDay()-1;
+		return dn==-1?6:dn;
+	}
+	Date.prototype.getMonthName = function() {
+		var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+		return monthNames[this.getMonth()];
+	}
+	
+	//Create the application state
+	appState = {
+		"today" : new Date(),
+		"displayDate" : new Date()
+	};
+
+	mb = createMonthBlock(appState.today);
+	renderMonthBlock(mb);
+	
+	$(".changeMonth").click(function(e){
+		var dir = $(this).hasClass("previous") ? -1 : 1;
+		var d = new Date(appState.displayDate);
+		d.setMonth(d.getMonth()+dir);
+		appState.displayDate = d;						//Update the displayDate property
+		var mb = createMonthBlock(d);
+		renderMonthBlock(mb);
+	});
+});
+
+function createMonthBlock(theDay){
+	var monthBlock = {};
+	monthBlock.days = {};
+	monthBlock.month = theDay.getMonth();
+	monthBlock.year = theDay.getFullYear();
+	var firstDayOfMonth = new Date(theDay.getFullYear(), theDay.getMonth(), 1); //Get the first day of the month as a Date object
+	var dayOfWeekNum = firstDayOfMonth.getDayWhereMondayIsZero();				//Get the starting day (0 to 6 Mon to Sun)
+	var lastDay = theDay.getNumOfDaysInMonth();									//Get the last day of the month as an integer
+	var daysInBlock = 42;														//Set total number of days in month block
+	var prevGap = dayOfWeekNum == 0 ? 7: dayOfWeekNum;							//The number of days required from the previous month
+	var dayTicker = 0-prevGap;													//Initially negative, unless month starts on Monday
+	
+	for(var i=0; i<daysInBlock; i++){
+		monthBlock.days[i] = new Date(appState.displayDate);
+		monthBlock.days[i].setDate(firstDayOfMonth.getDate()+dayTicker);
+		dayTicker += 1;
+	}
+	return monthBlock;
+}
+
+function renderMonthBlock(monthBlock){
+	var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+	var dayNames = ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"];
+	var render = {};
+	var cells = [];
+	var $table = $(document.createElement('table')).addClass("monthBlock").addClass(monthNames[monthBlock.month]).addClass("y"+monthBlock.year);
+
+	//Create the Month name heading row
+	var monthNameHead = $(document.createElement('tr')).append($(document.createElement('td')).attr('colspan', 7).html(monthNames[monthBlock.month]+" "+monthBlock.year));
+	$table.append(monthNameHead);
+	
+	//Create the day names heading row
+	var dayNamesHead = dayNames.map(function(dayName){
+		return $(document.createElement('td')).html(dayName);
+	});
+	$table.append($(document.createElement('tr')).html(dayNamesHead));
+	
+	//Create a table cell for each of the 42 days
+	for(var i in monthBlock.days){
+		if(monthBlock.days.hasOwnProperty(i)){
+			//Build the calendar day display here
+			var dayNum = monthBlock.days[i].getDate();
+			cells.push($(document.createElement('td')).html(dayNum));
+		}
+	}
+	
+	//Divide the cells array up into 6 rows and place them in the table
+	for(var n=0; n<6; n++){
+		$table.append($(document.createElement('tr')).html(cells.splice(0,7)));
+	}
+	$("div#tableContainer").html($table);
+	return render;
+}
+		</script>
+	</head>
+	<body>
+		<span class="changeMonth previous"><<</span>&nbsp;<span class="changeMonth next">>></span>
+		<div id="tableContainer"></div>
+	</body>
+</html>
