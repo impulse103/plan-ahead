@@ -11,7 +11,7 @@
 		<script type="text/javascript">
 $(document).ready(function(){
 	//Extend the date prototype to allow any date object to return the number of days in its month
-	Date.prototype.getNumOfDaysInMonth = function() {
+	Date.prototype.getNumOfDaysInMonth = function(){
 		return new Date(this.getFullYear(), this.getMonth()+1, 0).getDate();	
 	}
 	//Get the day number where 0 to 6 represents Monday to Sunday, alternative to the getDay() absurdity where 0 represents Sunday
@@ -19,13 +19,23 @@ $(document).ready(function(){
 		var dn = new Date(this).getDay()-1;
 		return dn==-1?6:dn;
 	}
-	Date.prototype.getMonthName = function() {
+	Date.prototype.getMonthName = function(){
 		var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 		return monthNames[this.getMonth()];
 	}
+	Date.prototype.getLittleEndian = function(){
+		return +this.getDate()+"-"+(this.getMonth()+1)+"-"+this.getFullYear();
+	}
+	var supportsHtml5Storage = function(){
+		try {
+			return 'localStorage' in window && window['localStorage'] !== null;
+		}catch(e){
+			return false;
+		}
+	}
 	
 	//Create the application state using the revealing module pattern
-	planAheadApp = (function(){
+	var planAheadApp = (function(){
 		var today, displayDate = new Date();	//Use today's date as the starting point
 		
 		//Receives Date Object, returns Object containing info regarding day numbers of parameter theDay's month
@@ -42,10 +52,13 @@ $(document).ready(function(){
 			var dayTicker = 0-prevGap;													//Initially negative, unless month starts on Monday
 			
 			for(var i=0; i<daysInBlock; i++){
-				monthBlock.days[i] = new Date(planAheadApp.displayDate);
-				monthBlock.days[i].setDate(firstDayOfMonth.getDate()+dayTicker);
+				monthBlock.days[i] = {};
+				monthBlock.days[i]['date'] = new Date(planAheadApp.displayDate);
+				monthBlock.days[i]['date'].setDate(firstDayOfMonth.getDate()+dayTicker);
+				monthBlock.days[i]['type'] = dayTicker < 0 ? "previous" : dayTicker >= lastDay ? "next" : "current";
 				dayTicker += 1;
 			}
+			console.log(monthBlock);
 			return monthBlock;
 		};
 		
@@ -70,8 +83,8 @@ $(document).ready(function(){
 			for(var i in monthBlock.days){
 				if(monthBlock.days.hasOwnProperty(i)){
 					//Build the calendar day display here
-					var dayNum = monthBlock.days[i].getDate();
-					cells.push($(document.createElement('td')).html(dayNum));
+					var dayNum = monthBlock.days[i]['date'].getDate();
+					cells.push($(document.createElement('td')).html(dayNum).attr('data-date',monthBlock.days[i]['date'].getLittleEndian()).addClass(monthBlock.days[i]['type']));
 				}
 			}
 			
@@ -97,18 +110,44 @@ $(document).ready(function(){
 	
 	//Handles the changing of the month by updating the data model and HTML view
 	$(".changeMonth").click(function(e){
-		var dir = $(this).hasClass("previous") ? -1 : 1;
-		var d = new Date(planAheadApp.displayDate);					//Get the currently displayed date
-		d.setMonth(d.getMonth()+dir);								//Add dir (-1 or 1) to shift 1 month
+		var d;
+		if($(this).hasClass("next") || $(this).hasClass("previous")){
+			var dir = $(this).hasClass("previous") ? -1 : 1;
+			d = new Date(planAheadApp.displayDate);					//Get the currently displayed date
+			d.setMonth(d.getMonth()+dir);							//Add dir (-1 or 1) to shift 1 month
+		}else{
+			d = new Date();											//User triggered .changeMonth.today
+		}
 		planAheadApp.displayDate = d;								//Update the displayDate property
 		$("div#tableContainer").html(planAheadApp.showMonth(d));	//Update the view
 	});
+	
+	if(supportsHtml5Storage()){
+
+		var eventsOfTheDay = [
+			{
+				"name" : "Christmas part 2",
+				"time" : "13:00",
+				"desc" : "Christmas gift giving with the family."
+			},
+			{
+				"name" : "Physio",
+				"time" : "16:40",
+				"desc" : "Get stretched on a rack at the hospital again."
+			}
+		];
+		localStorage.setItem("planahead-"+"27-12-2012", JSON.stringify(eventsOfTheDay));
+		for(var key in localStorage){
+			console.log(key+" : "+localStorage[key]);
+		}
+	}
+	
 });
 
 		</script>
 	</head>
 	<body>
-		<span class="changeMonth previous"><<</span>&nbsp;<span class="changeMonth next">>></span>
+		<span class="changeMonth previous">Previous</span>&nbsp;<span class="changeMonth next">Next</span>&nbsp;<span class="changeMonth today">Today</span>
 		<div id="tableContainer"></div>
 	</body>
 </html>

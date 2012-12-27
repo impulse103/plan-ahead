@@ -1,5 +1,20 @@
+body{
+	font-family:arial,sans-serif,helvetica;
+}
 table.monthBlock{
+	background-color: #DFD;
+	border: solid 1px #CEC;
+	font-size:0.8em;
 	text-align:center;
+}
+table.monthBlock tr td{
+	color:#343;
+	background-color:#CEC;
+	padding:1em;
+}
+table.monthBlock tr td.previous,
+table.monthBlock tr td.next{
+	color:#bcb;
 }
 span.changeMonth{
 	cursor:pointer;
