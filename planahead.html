@@ -36,9 +36,10 @@ $(document).ready(function(){
 	
 	//Create the application state using the revealing module pattern
 	var planAheadApp = (function(){
-		var today, displayDate = new Date();	//Use today's date as the starting point
+		var today = new Date();
+		var displayDate = new Date();	//Use today's date as the starting point
 		
-		//Receives Date Object, returns Object containing info regarding day numbers of parameter theDay's month
+		//Receives Date Object, returns Object containing info regarding day numbers of parameter theDay's month. And local storage events.
 		var createMonthBlock = function(theDay){
 			var monthBlock = {};
 			monthBlock.days = {};
@@ -51,14 +52,28 @@ $(document).ready(function(){
 			var prevGap = dayOfWeekNum == 0 ? 7: dayOfWeekNum;							//The number of days required from the previous month
 			var dayTicker = 0-prevGap;													//Initially negative, unless month starts on Monday
 			
+			//Create the monthBlock array, creating an object for each day
 			for(var i=0; i<daysInBlock; i++){
+				//Create the new object and set the date
 				monthBlock.days[i] = {};
 				monthBlock.days[i]['date'] = new Date(planAheadApp.displayDate);
 				monthBlock.days[i]['date'].setDate(firstDayOfMonth.getDate()+dayTicker);
+				//Set the type property of the object, according to which month it belongs.; used for setting CSS class later
 				monthBlock.days[i]['type'] = dayTicker < 0 ? "previous" : dayTicker >= lastDay ? "next" : "current";
+				//Add either "weekend" or "weekday" to the type property
+				monthBlock.days[i]['date'].getDayWhereMondayIsZero()>4 ? monthBlock.days[i]['type'] += " weekend" : monthBlock.days[i]['type'] += " weekday";
+				//Indicate that local data is available on appropriate cells by adding to the type property
+				if(localStorage['planahead-'+monthBlock.days[i]['date'].getLittleEndian()]!=null){
+					monthBlock.days[i]['type'] += " data";
+				}
 				dayTicker += 1;
 			}
-			console.log(monthBlock);
+			
+			//Add special type for today
+			if(today.getMonth()==theDay.getMonth() && today.getFullYear()==theDay.getFullYear()){
+				monthBlock.days[today.getDate()+prevGap-1]['type'] += " today";
+			}
+			
 			return monthBlock;
 		};
 		
@@ -74,9 +89,10 @@ $(document).ready(function(){
 			$table.append(monthNameHead);
 			
 			//Create the day names heading row
-			var dayNamesHead = dayNames.map(function(dayName){
-				return $(document.createElement('td')).html(dayName);
+			var dayNamesHead = dayNames.map(function(dayName, index){
+				return index >= 5  ? $(document.createElement('td')).html(dayName).addClass("weekend") : $(document.createElement('td')).html(dayName);
 			});
+			
 			$table.append($(document.createElement('tr')).html(dayNamesHead));
 			
 			//Create a table cell for each of the 42 days

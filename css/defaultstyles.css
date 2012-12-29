@@ -16,6 +16,15 @@ table.monthBlock tr td.previous,
 table.monthBlock tr td.next{
 	color:#bcb;
 }
+table.monthBlock tr td.today{
+	background-color:#FAA;
+}
+table.monthBlock tr td.data{
+	text-decoration:underline;
+}
+table.monthBlock tr td.weekend{
+	background-color:#BDB;
+}
 span.changeMonth{
 	cursor:pointer;
 }
