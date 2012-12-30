@@ -26,6 +26,13 @@ $(document).ready(function(){
 	Date.prototype.getLittleEndian = function(){
 		return +this.getDate()+"-"+(this.getMonth()+1)+"-"+this.getFullYear();
 	}
+	String.prototype.littleToMiddleEndian = function(){
+		return (function(a){return [a[1],a[0],a[2]].join("-");}(this.split("-")));
+	}
+	Number.prototype.toOrdinal = function() {
+		var n = this.valueOf(),	s = [ 'th', 'st', 'nd', 'rd' ], v = n % 100;
+		return n + (s[(v-20)%10] || s[v] || s[0]);
+	}
 	var supportsHtml5Storage = function(){
 		try {
 			return 'localStorage' in window && window['localStorage'] !== null;
@@ -38,6 +45,9 @@ $(document).ready(function(){
 	var planAheadApp = (function(){
 		var today = new Date();
 		var displayDate = new Date();	//Use today's date as the starting point
+		var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+		var dayNamesFull = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
+		var dayNamesShort = ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"];
 		
 		//Receives Date Object, returns Object containing info regarding day numbers of parameter theDay's month. And local storage events.
 		var createMonthBlock = function(theDay){
@@ -79,18 +89,16 @@ $(document).ready(function(){
 		
 		//Receives monthBlock Object returned from createMonthBlock, returns HTML table containing date info for one month
 		var renderMonthBlock = function(monthBlock){
-			var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-			var dayNames = ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"];
 			var cells = [];
-			var $table = $(document.createElement('table')).addClass("monthBlock").addClass(monthNames[monthBlock.month]).addClass("y"+monthBlock.year);
+			var $table = $("<table></table>").addClass("monthBlock").addClass(monthNames[monthBlock.month]).addClass("y"+monthBlock.year);
 
 			//Create the Month name heading row
-			var monthNameHead = $(document.createElement('tr')).append($(document.createElement('td')).attr('colspan', 7).html(monthNames[monthBlock.month]+" "+monthBlock.year));
+			var monthNameHead = $("<tr></tr>").append($("<td id='monthNameHead'></td>").attr('colspan', 7).html(monthNames[monthBlock.month]+" "+monthBlock.year));
 			$table.append(monthNameHead);
 			
 			//Create the day names heading row
-			var dayNamesHead = dayNames.map(function(dayName, index){
-				return index >= 5  ? $(document.createElement('td')).html(dayName).addClass("weekend") : $(document.createElement('td')).html(dayName);
+			var dayNamesHead = dayNamesShort.map(function(dayName, index){
+				return index >= 5  ? $("<td></td>").html(dayName).addClass("weekend") : $("<td></td>").html(dayName);
 			});
 			
 			$table.append($(document.createElement('tr')).html(dayNamesHead));
@@ -100,7 +108,11 @@ $(document).ready(function(){
 				if(monthBlock.days.hasOwnProperty(i)){
 					//Build the calendar day display here
 					var dayNum = monthBlock.days[i]['date'].getDate();
-					cells.push($(document.createElement('td')).html(dayNum).attr('data-date',monthBlock.days[i]['date'].getLittleEndian()).addClass(monthBlock.days[i]['type']));
+					$td = $(document.createElement('td')).html(dayNum).attr('data-date',monthBlock.days[i]['date'].getLittleEndian()).addClass(monthBlock.days[i]['type']);
+					if(monthBlock.days[i]['type'].indexOf("data") !== -1){
+						$td.append($('<div></div>').addClass('corner-arrow'));
+					}
+					cells.push($td);
 				}
 			}
 			
@@ -116,13 +128,63 @@ $(document).ready(function(){
 			return renderMonthBlock(createMonthBlock(theDay));
 		};
 		
+		//Receives date string in Little Endian format; "dd-mm-yyyy", returns HTML
+		//table containing data retrieved from local storage where such data exists
+		var showEvents = function(day){
+			var dayLE = typeof day == "string" ? day : day.getLittleEndian();
+			//Convert 'day' from Little Endian to Middle Endian in order to create Date object
+			var dayME = dayLE.littleToMiddleEndian();
+			var d = new Date(dayME);
+			var readableDate = dayNamesFull[d.getDayWhereMondayIsZero()]+" "+d.getDate().toOrdinal()+" "+(monthNames[d.getMonth()])+" "+d.getFullYear();
+			
+			$eventsTable = $("<table id='events'></table>").append($("<tr><td id='eventsDate'>"+readableDate+"</td></tr>"));
+			
+			//Parse JSON from the
+			//local storage here
+			var todaysEvents = localStorage['planahead-'+dayLE];
+			if(todaysEvents){
+				var events = JSON.parse(todaysEvents);
+				//Split events array into two arrays; one of objects with 'time' attributes and the other without
+				var woTime = [];	//Without time
+				var wiTime = [];	//With time
+				for(var i=0; i<events.length; i++){
+					if(events[i].time){
+						wiTime.push(events[i]);
+					}else{
+						woTime.push(events[i]);
+					}
+				}
+				//Sort the events by their 'time' property
+				wiTime.sort(function(a, b){ 
+					return a.time - b.time;
+				});
+				//Iterate over events without time array, making a table row for each
+				for(var i=0; i<woTime.length; i++){
+					$eventsTable.append($("<tr></tr>").append($("<td class='eventsCell'>"+woTime[i].name+"</td>")));	
+				}
+				//Next iterate over events with time array, making a table row for each
+				for(var i=0; i<wiTime.length; i++){
+					var eventTime = wiTime[i].time ? wiTime[i].time : "*";
+					$eventsTable.append($("<tr></tr>").append($("<td class='eventsCell'>"+eventTime+" - "+wiTime[i].name+"</td>")));	
+				}
+			}else{
+				$eventsTable.append($("<tr></tr>").append($("<td class='eventsCell noneFound'>No events found</td>")));	
+			}
+			
+			$eventsTable.append($("<tr></tr>").append($("<td id='createNewEvent'>Create new event</td>")));
+			return $eventsTable;
+		};
+				
 		return {
+			"today" : today,
 			"displayDate" : displayDate,
-			"showMonth" : showMonth
+			"showMonth" : showMonth,
+			"showEvents" : showEvents
 		}
 	}());
 	
-	$("div#tableContainer").html(planAheadApp.showMonth(planAheadApp.displayDate));	//Set the HTML table to initially display current month
+	$("div#tableContainer").html(planAheadApp.showMonth(planAheadApp.displayDate));	//Set the HTML calendar table to display current month
+	$("div#eventsList").html(planAheadApp.showEvents(planAheadApp.displayDate));	//Set the HTML events table to display today's events
 	
 	//Handles the changing of the month by updating the data model and HTML view
 	$(".changeMonth").click(function(e){
@@ -138,6 +200,11 @@ $(document).ready(function(){
 		$("div#tableContainer").html(planAheadApp.showMonth(d));	//Update the view
 	});
 	
+	$("div#tableContainer").on("click", "td.previous, td.current, td.next", function(){
+		$("div#eventsList").html(planAheadApp.showEvents($(this).attr("data-date")));	//Set the HTML events table to display today's events
+		$("div#eventsList").show();
+	});
+	
 	if(supportsHtml5Storage()){
 
 		var eventsOfTheDay = [
@@ -150,11 +217,15 @@ $(document).ready(function(){
 				"name" : "Physio",
 				"time" : "16:40",
 				"desc" : "Get stretched on a rack at the hospital again."
+			},
+			{
+				"name" : "Christmas part 2",
+				"desc" : "Christmas gift giving with the family."
 			}
 		];
 		localStorage.setItem("planahead-"+"27-12-2012", JSON.stringify(eventsOfTheDay));
 		for(var key in localStorage){
-			console.log(key+" : "+localStorage[key]);
+			//console.log(key+" : "+localStorage[key]);
 		}
 	}
 	
@@ -164,6 +235,19 @@ $(document).ready(function(){
 	</head>
 	<body>
 		<span class="changeMonth previous">Previous</span>&nbsp;<span class="changeMonth next">Next</span>&nbsp;<span class="changeMonth today">Today</span>
-		<div id="tableContainer"></div>
+		<div id="calendarSpace">
+			<div id="tableContainer"></div>
+			<div id="eventsList">
+				<table id="events">
+					<tr>
+						<td id="eventsDate">Events for this day..</td>
+					</tr>
+					<tr>
+						<td id="createNewEvent">Create a new event +</td>
+					</tr>
+				</table>
+			</div>
+			<div class="clear"></div>
+		</div>
 	</body>
 </html>
