@@ -109,6 +109,11 @@ $(document).ready(function(){
 					//Build the calendar day display here
 					var dayNum = monthBlock.days[i]['date'].getDate();
 					$td = $(document.createElement('td')).html(dayNum).attr('data-date',monthBlock.days[i]['date'].getLittleEndian()).addClass(monthBlock.days[i]['type']);
+					//Attach the data from localStorage
+					var dayEventData = localStorage["planahead-"+monthBlock.days[i]['date'].getLittleEndian()];
+					if(dayEventData){
+						$td.data("eventData", dayEventData);
+					}
 					if(monthBlock.days[i]['type'].indexOf("data") !== -1){
 						$td.append($('<div></div>').addClass('corner-arrow'));
 					}
@@ -203,6 +208,7 @@ $(document).ready(function(){
 	$("div#tableContainer").on("click", "td.previous, td.current, td.next", function(){
 		$("div#eventsList").html(planAheadApp.showEvents($(this).attr("data-date")));	//Set the HTML events table to display today's events
 		$("div#eventsList").show();
+		console.log($(this).data());
 	});
 	
 	if(supportsHtml5Storage()){
