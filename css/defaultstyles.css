@@ -55,6 +55,7 @@ span.changeMonth{
 div#eventsList{
 	background-color:#497;
 	color:#fff;
+	display:none;
 	float:left;
 	height:100%;
 	margin-left:10px;

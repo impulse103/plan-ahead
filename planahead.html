@@ -48,6 +48,16 @@ $(document).ready(function(){
 		var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 		var dayNamesFull = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 		var dayNamesShort = ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"];
+		var eventsEditor = (function(){
+			var currentEvents = [];
+			var removeEvent = function(){};
+			var addEvent = function(){};
+			return{
+				"currentEvents" : currentEvents,
+				"removeEvent" : removeEvent,
+				"addEvent" : addEvent
+			};
+		})();
 		
 		//Receives Date Object, returns Object containing info regarding day numbers of parameter theDay's month. And local storage events.
 		var createMonthBlock = function(theDay){
@@ -110,9 +120,9 @@ $(document).ready(function(){
 					var dayNum = monthBlock.days[i]['date'].getDate();
 					$td = $(document.createElement('td')).html(dayNum).attr('data-date',monthBlock.days[i]['date'].getLittleEndian()).addClass(monthBlock.days[i]['type']);
 					//Attach the data from localStorage
-					var dayEventData = localStorage["planahead-"+monthBlock.days[i]['date'].getLittleEndian()];
+					var dayEventData = localStorage["planahead-"+monthBlock.days[i]['date'].getLittleEndian()];	//Retrieve the JSON string
 					if(dayEventData){
-						$td.data("eventData", dayEventData);
+						$td.data("eventData", JSON.parse(dayEventData));	//Parse the JSON string to create an Object and attach to $td
 					}
 					if(monthBlock.days[i]['type'].indexOf("data") !== -1){
 						$td.append($('<div></div>').addClass('corner-arrow'));
@@ -133,22 +143,26 @@ $(document).ready(function(){
 			return renderMonthBlock(createMonthBlock(theDay));
 		};
 		
-		//Receives date string in Little Endian format; "dd-mm-yyyy", returns HTML
-		//table containing data retrieved from local storage where such data exists
-		var showEvents = function(day){
-			var dayLE = typeof day == "string" ? day : day.getLittleEndian();
-			//Convert 'day' from Little Endian to Middle Endian in order to create Date object
+		//Receives data object containing a date string in Little Endian format; "dd-mm-yyyy", and event data for days where events occur
+		//returns HTML table containing event data if applicable
+		var showEvents = function(dataObj){
+			//Populate the current Events in the events editor object
+			this.eventsEditor.currentEvents = dataObj.eventData;
+			console.log(this);
+			
+			//Render a readable date from the date in the data object
+			var dayLE = dataObj.date;
 			var dayME = dayLE.littleToMiddleEndian();
 			var d = new Date(dayME);
 			var readableDate = dayNamesFull[d.getDayWhereMondayIsZero()]+" "+d.getDate().toOrdinal()+" "+(monthNames[d.getMonth()])+" "+d.getFullYear();
 			
+			//Append a table row and cell containing the readable date in the events table
 			$eventsTable = $("<table id='events'></table>").append($("<tr><td id='eventsDate'>"+readableDate+"</td></tr>"));
 			
-			//Parse JSON from the
-			//local storage here
-			var todaysEvents = localStorage['planahead-'+dayLE];
+			//Read the JSON object from the clicked table cell
+			var todaysEvents = dataObj.eventData;
 			if(todaysEvents){
-				var events = JSON.parse(todaysEvents);
+				var events = todaysEvents;
 				//Split events array into two arrays; one of objects with 'time' attributes and the other without
 				var woTime = [];	//Without time
 				var wiTime = [];	//With time
@@ -184,12 +198,12 @@ $(document).ready(function(){
 			"today" : today,
 			"displayDate" : displayDate,
 			"showMonth" : showMonth,
-			"showEvents" : showEvents
+			"showEvents" : showEvents,
+			"eventsEditor" : eventsEditor
 		}
 	}());
 	
 	$("div#tableContainer").html(planAheadApp.showMonth(planAheadApp.displayDate));	//Set the HTML calendar table to display current month
-	$("div#eventsList").html(planAheadApp.showEvents(planAheadApp.displayDate));	//Set the HTML events table to display today's events
 	
 	//Handles the changing of the month by updating the data model and HTML view
 	$(".changeMonth").click(function(e){
@@ -206,9 +220,9 @@ $(document).ready(function(){
 	});
 	
 	$("div#tableContainer").on("click", "td.previous, td.current, td.next", function(){
-		$("div#eventsList").html(planAheadApp.showEvents($(this).attr("data-date")));	//Set the HTML events table to display today's events
+		//Set the events list's display; passing in the event data object attached to the table cell
+		$("div#eventsList").html(planAheadApp.showEvents($(this).data()));	
 		$("div#eventsList").show();
-		console.log($(this).data());
 	});
 	
 	if(supportsHtml5Storage()){
@@ -229,7 +243,7 @@ $(document).ready(function(){
 				"desc" : "Christmas gift giving with the family."
 			}
 		];
-		localStorage.setItem("planahead-"+"27-12-2012", JSON.stringify(eventsOfTheDay));
+		localStorage.setItem("planahead-"+"27-1-2013", JSON.stringify(eventsOfTheDay));
 		for(var key in localStorage){
 			//console.log(key+" : "+localStorage[key]);
 		}
