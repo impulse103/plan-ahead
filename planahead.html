@@ -45,6 +45,7 @@ $(document).ready(function(){
 	var planAheadApp = (function(){
 		var today = new Date();
 		var displayDate = new Date();	//Use today's date as the starting point
+		var selectedDate;
 		var monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 		var dayNamesFull = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 		var dayNamesShort = ["Mon", "Tues", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -148,7 +149,6 @@ $(document).ready(function(){
 		var showEvents = function(dataObj){
 			//Populate the current Events in the events editor object
 			this.eventsEditor.currentEvents = dataObj.eventData;
-			console.log(this);
 			
 			//Render a readable date from the date in the data object
 			var dayLE = dataObj.date;
@@ -163,42 +163,44 @@ $(document).ready(function(){
 			var todaysEvents = dataObj.eventData;
 			if(todaysEvents){
 				var events = todaysEvents;
-				//Split events array into two arrays; one of objects with 'time' attributes and the other without
-				var woTime = [];	//Without time
-				var wiTime = [];	//With time
-				for(var i=0; i<events.length; i++){
-					if(events[i].time){
-						wiTime.push(events[i]);
-					}else{
-						woTime.push(events[i]);
-					}
-				}
+
 				//Sort the events by their 'time' property
-				wiTime.sort(function(a, b){ 
+				events.sort(function(a, b){ 
 					return a.time - b.time;
 				});
-				//Iterate over events without time array, making a table row for each
-				for(var i=0; i<woTime.length; i++){
-					$eventsTable.append($("<tr></tr>").append($("<td class='eventsCell'>"+woTime[i].name+"</td>")));	
-				}
-				//Next iterate over events with time array, making a table row for each
-				for(var i=0; i<wiTime.length; i++){
-					var eventTime = wiTime[i].time ? wiTime[i].time : "*";
-					$eventsTable.append($("<tr></tr>").append($("<td class='eventsCell'>"+eventTime+" - "+wiTime[i].name+"</td>")));	
+				//Iterate over events with time array, making a table row for each
+				for(var i=0; i<events.length; i++){
+					var eventTime = events[i].time ? events[i].time +" - ": "";
+					var $tableCell = $("<td class='eventsCell'>"+eventTime+events[i].name+"</td>");
+					$tableCell.data(events[i]);
+					$eventsTable.append($("<tr></tr>").append($tableCell));	
 				}
 			}else{
-				$eventsTable.append($("<tr></tr>").append($("<td class='eventsCell noneFound'>No events found</td>")));	
+				$eventsTable.append($("<tr></tr>").append($("<td class='noEventsCell'>No events found</td>")));	
 			}
 			
 			$eventsTable.append($("<tr></tr>").append($("<td id='createNewEvent'>Create new event</td>")));
 			return $eventsTable;
 		};
+		
+		//Receives a data object containing data for one event; the event to be displayed
+		var showEventPanel = function(vObj){
+			var titleAndTime = vObj.time ? vObj.time +" - "+vObj.name : vObj.name;
+			//Place the event title and time if applicable in the top cell
+			$titleTime = $("div#eventPanel table#event tr td#eventTitleAndTime");
+			$titleTime.text(titleAndTime);
+			
+			//Place the event description in the next cell
+			$("div#eventPanel table#event tr td#eventDescription").text(vObj.desc);
+		}
 				
 		return {
 			"today" : today,
 			"displayDate" : displayDate,
+			"selectedDate" : selectedDate,
 			"showMonth" : showMonth,
 			"showEvents" : showEvents,
+			"showEventPanel" : showEventPanel,
 			"eventsEditor" : eventsEditor
 		}
 	}());
@@ -216,34 +218,56 @@ $(document).ready(function(){
 			d = new Date();											//User triggered .changeMonth.today
 		}
 		planAheadApp.displayDate = d;								//Update the displayDate property
+		$("div#tableContainer td.selected").removeClass("selected");//Remove any .selected class
 		$("div#tableContainer").html(planAheadApp.showMonth(d));	//Update the view
 	});
 	
+	//Handles the click of the calendar date cells
 	$("div#tableContainer").on("click", "td.previous, td.current, td.next", function(){
+		$("div#tableContainer td.selected").removeClass("selected");//Remove any .selected class
+		$(this).addClass("selected");//Place the .selected class on the newly selected table cell
+	
 		//Set the events list's display; passing in the event data object attached to the table cell
 		$("div#eventsList").html(planAheadApp.showEvents($(this).data()));	
 		$("div#eventsList").show();
+		
+		//Hide the event panel if the clicked date is not the one currently being displayed
+		if($(this).data("date")!=planAheadApp.selectedDate){
+			$("div#eventPanel").hide();
+		}
+		
+		//Update the selectedDate
+		planAheadApp.selectedDate = $(this).data("date");
+	});
+	
+	//Handles the click of the events cells
+	$("div#eventsList").on("click", "table#events td.eventsCell", function(){
+		$("div#eventsList td.eventsCell.selected").removeClass("selected");//Remove any .selected class
+		$(this).addClass("selected");//Place the .selected class on the newly selected events cell
+		//Set the event panel display; passing in the event data object (which at this point contains 1 event) attached to the event cell
+		$("div#eventPanel").html(planAheadApp.showEventPanel($(this).data()));
+		$("div#eventPanel").show();
 	});
 	
 	if(supportsHtml5Storage()){
 
 		var eventsOfTheDay = [
 			{
-				"name" : "Christmas part 2",
+				"name" : "A made up event",
 				"time" : "13:00",
-				"desc" : "Christmas gift giving with the family."
+				"desc" : "Stuff's happening then. And then more stuff's happening later. Write a proper description of the event here why don't you?"
 			},
 			{
-				"name" : "Physio",
+				"name" : "I'm so busy",
 				"time" : "16:40",
-				"desc" : "Get stretched on a rack at the hospital again."
+				"desc" : "I have appointments!!!. This could also be used a diary."
 			},
 			{
-				"name" : "Christmas part 2",
-				"desc" : "Christmas gift giving with the family."
+				"name" : "Party hard",
+				"desc" : "And the resulting pain"
 			}
 		];
-		localStorage.setItem("planahead-"+"27-1-2013", JSON.stringify(eventsOfTheDay));
+		localStorage.setItem("planahead-"+"28-1-2013", JSON.stringify(eventsOfTheDay));
 		for(var key in localStorage){
 			//console.log(key+" : "+localStorage[key]);
 		}
@@ -264,6 +288,20 @@ $(document).ready(function(){
 					</tr>
 					<tr>
 						<td id="createNewEvent">Create a new event +</td>
+					</tr>
+				</table>
+			</div>
+			<div id="eventPanel">
+				<table id="event">
+					<tr>
+						<td id="eventTitleAndTime">Event Title and Time</td>
+					</tr>
+					<tr>
+						<td id="eventDescription">
+							The full descriptive text of the event will go into this space here. For now, let's have some filler text. Dummy dummy,
+							text is funny. Lorem ipsum dolor sit amet. Your text here. Dummy dummy, text is funny. Lorem ipsum dolor sit amet. 
+							Your text here. Dummy dummy, text is funny. Lorem ipsum dolor sit amet. Your text here.
+						</td>
 					</tr>
 				</table>
 			</div>

@@ -36,11 +36,12 @@ table.monthBlock tr td.weekend{
 	background-color:#6B9;
 }
 table.monthBlock tr td.today{
-	background-color:#E9A;
+	background-color:#ACE;
 }
 table.monthBlock tr td.previous:hover,
 table.monthBlock tr td.next:hover,
-table.monthBlock tr td.current:hover{
+table.monthBlock tr td.current:hover,
+div#eventsList table#events tr td.eventsCell:hover{
 	background-color:#6EA;
 }
 table.monthBlock tr td.previous:hover,
@@ -66,17 +67,39 @@ div#eventsList table#events{
 }
 div#eventsList table#events tr td{
 	padding:1em;
+	cursor:pointer;
 }
 div#eventsList table#events tr td#eventsDate,
 div#eventsList table#events tr td#createNewEvent{
 	background-color:#6B9;
 }
-div#eventsList table#events tr td.eventsCell{
+div#eventsList table#events tr td.eventsCell,
+div#eventsList table#events tr td.noEventsCell{
 	background-color:#5A8;
 	text-align:center;
 }
-div#eventsList table#events tr td.eventsCell.noneFound{
-	text-align:center;
+/* Event Panel */
+div#eventPanel{
+	background-color:#497;
+	color:#fff;
+	display:none;
+	float:left;
+	height:100%;
+	margin-left:10px;
+	width:220px;
+}
+div#eventPanel table#event{
+	width:100%;
+}
+div#eventPanel tr td{
+	background-color:#5A8;
+	padding:1em;
+}
+div#eventPanel tr td#eventTitleAndTime{
+	background-color:#6B9;
+}
+div#eventPanel tr td#eventDescription{
+	line-height: 1.4em;
 }
 /* Misc */
 .corner-arrow {
@@ -91,4 +114,9 @@ div#eventsList table#events tr td.eventsCell.noneFound{
 }
 .clear{
 	clear:both;
+}
+div#calendarSpace div#tableContainer table.monthBlock tr td.selected,
+div#calendarSpace div#eventsList table#events tr td.eventsCell.selected{
+	background-color:#C78;
+	color:#fff;
 }
